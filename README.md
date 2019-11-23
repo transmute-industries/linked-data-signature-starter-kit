@@ -31,7 +31,7 @@ You can read the documentation here:
 
 [https://transmute-industries.github.io/linked-data-signature-starter-kit/](https://transmute-industries.github.io/linked-data-signature-starter-kit/)
 
-And the corrosponding context:
+And the context:
 
 [https://transmute-industries.github.io/linked-data-signature-starter-kit/contexts/linked-data-signature-starter-kit-v0.0.jsonld](https://transmute-industries.github.io/linked-data-signature-starter-kit/contexts/linked-data-signature-starter-kit-v0.0.jsonld)
 

@@ -86,12 +86,7 @@ describe("MyLinkedDataSignatureJws2019", () => {
       compactProof: false
     });
 
-    // console.log(res);
-
-    const { verified, error } = res;
-
-    console.log(error);
-
+    const { verified } = res;
     expect(verified).toBe(true);
   });
 });

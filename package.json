@@ -2,9 +2,10 @@
   "name": "linked-data-signature-starter-kit",
   "version": "1.0.0",
   "description": "The purpose of this repo is to provide a starting point for developers wishing to implement JSON-LD Signatures.",
-  "main": "index.js",
+  "main": "./src/index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "coverage": "jest --coverage"
   },
   "repository": {
     "type": "git",

@@ -1,18 +1,18 @@
-const jsonld = require("jsonld");
-
-const _nodejs =
-  typeof process !== "undefined" && process.versions && process.versions.node;
-const _browser =
-  !_nodejs && (typeof window !== "undefined" || typeof self !== "undefined");
-
-const documentLoader = _browser
-  ? jsonld.documentLoaders.xhr()
-  : jsonld.documentLoaders.node();
+const fs = require("fs");
+const path = require("path");
 
 const contexts = {
   "https://w3id.org/did/v1": require("./contexts/did-v0.11.json"),
-  "https://example.com/my-context/v2": require("./contexts/my-context.json"),
-  "https://raw.githubusercontent.com/w3c/did-core/master/contexts/did-v0.11.jsonld": require("./contexts/did-v0.11.json")
+  "https://transmute-industries.github.io/linked-data-signature-starter-kit/contexts/linked-data-signature-starter-kit-v0.0.jsonld": JSON.parse(
+    fs
+      .readFileSync(
+        path.resolve(
+          __dirname,
+          "../../../docs/contexts/linked-data-signature-starter-kit-v0.0.jsonld"
+        )
+      )
+      .toString()
+  )
 };
 
 const customLoader = url => {
@@ -33,10 +33,8 @@ const customLoader = url => {
       documentUrl: url // this is the actual context URL after redirects
     };
   }
-
-  console.log(url);
-  // const doc = await documentLoader(url);
-  // return documentLoader(url, callback);
+  console.error("No custom context support for " + url);
+  throw new Error("No custom context support for " + url);
 };
 
 module.exports = customLoader;

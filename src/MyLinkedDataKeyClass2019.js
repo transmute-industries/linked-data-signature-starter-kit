@@ -1,8 +1,7 @@
-const crypto = require("crypto");
 const jose = require("@panva/jose");
-const linkedDataVerificationKeyType = "MyLinkedDataVerificationKey2019";
+const base64url = require("base64url");
 
-class LDKeyClassJose {
+class MyLinkedDataKeyClass2019 {
   /**
    * @param {KeyPairOptions} options - The options to use.
    * @param {string} options.id - The key ID.
@@ -12,6 +11,7 @@ class LDKeyClassJose {
    */
   constructor(options = {}) {
     this.id = options.id;
+    this.type = options.type;
     this.controller = options.controller;
     this.privateKeyJwk = options.privateKeyJwk;
     this.publicKeyJwk = options.publicKeyJwk;
@@ -39,11 +39,11 @@ class LDKeyClassJose {
    * Generates a KeyPair with an optional deterministic seed.
    * @param {KeyPairOptions} [options={}] - The options to use.
    *
-   * @returns {Promise<LDKeyClassJose>} Generates a key pair.
+   * @returns {Promise<MyLinkedDataKeyClass2019>} Generates a key pair.
    */
   static async generate(kty, crv, options = {}) {
     let key = jose.JWK.generateSync(kty, crv);
-    return new LDKeyClassJose({
+    return new MyLinkedDataKeyClass2019({
       privateKeyJwk: key.toJWK(true),
       publicKeyJwk: key.toJWK(),
       ...options
@@ -72,7 +72,7 @@ class LDKeyClassJose {
    * Adds a public key base to a public key node.
    *
    * @param {Object} publicKeyNode - The public key node in a jsonld-signature.
-   * @param {string} publicKeyNode.publicKeyJwk - Base58 Public Key for
+   * @param {string} publicKeyNode.publicKeyJwk - JWK Public Key for
    *   jsonld-signatures.
    *
    * @returns {Object} A PublicKeyNode in a block.
@@ -117,7 +117,7 @@ class LDKeyClassJose {
   }
 
   static async from(options) {
-    return new LDKeyClassJose(options);
+    return new MyLinkedDataKeyClass2019(options);
   }
 
   /**
@@ -148,7 +148,7 @@ class LDKeyClassJose {
  * Returns an object with an async sign function.
  * The sign function is bound to the KeyPair
  * and then returned by the KeyPair's signer method.
- * @param {LDKeyClassJose} key - An LDKeyClassJose.
+ * @param {MyLinkedDataKeyClass2019} key - An MyLinkedDataKeyClass2019.
  *
  * @returns {{sign: Function}} An object with an async function sign
  * using the private key passed in.
@@ -164,16 +164,27 @@ function joseSignerFactory(key) {
 
   return {
     async sign({ data }) {
-      const attachedJws = jose.JWS.sign(
-        Buffer.from(data),
-        jose.JWK.asKey(key.privateKeyJwk),
-        {
-          kid: key.privateKeyJwk.kid,
-          b64: false,
-          crit: ["b64"]
-        }
-      );
-      const [header, payload, signature] = attachedJws.split(".");
+      const makeSig = () => {
+        const attachedJws = jose.JWS.sign(
+          Buffer.from(data),
+          jose.JWK.asKey(key.privateKeyJwk),
+          {
+            kid: key.privateKeyJwk.kid,
+            b64: false,
+            crit: ["b64"]
+          }
+        );
+        const [header, payload, signature] = attachedJws.split(".");
+        return [header, payload, signature];
+      };
+
+      let header, payload, signature;
+      // sometimes jose fails...
+      do {
+        [header, payload, signature] = await makeSig();
+        // console.log(signature);
+      } while (signature.length !== 86);
+
       return header + ".." + signature;
     }
   };
@@ -184,7 +195,7 @@ function joseSignerFactory(key) {
  * Returns an object with an async verify function.
  * The verify function is bound to the KeyPair
  * and then returned by the KeyPair's verifier method.
- * @param {LDKeyClassJose} key - An LDKeyClassJose.
+ * @param {MyLinkedDataKeyClass2019} key - An MyLinkedDataKeyClass2019.
  *
  * @returns {{verify: Function}} An async verifier specific
  * to the key passed in.
@@ -192,10 +203,36 @@ function joseSignerFactory(key) {
 function joseVerifierFactory(key) {
   return {
     async verify({ data, signature }) {
+      const [encodedHeader, payload, encodedsignature] = signature.split(".");
+
+      let header;
+      try {
+        header = JSON.parse(base64url.decode(encodedHeader));
+      } catch (e) {
+        throw new Error("Could not parse JWS header; " + e);
+      }
+      if (!(header && typeof header === "object")) {
+        throw new Error("Invalid JWS header.");
+      }
+
+      // confirm header matches all expectations
+      if (
+        !(
+          header.alg === this.alg &&
+          header.b64 === false &&
+          Array.isArray(header.crit) &&
+          header.crit.length === 1 &&
+          header.crit[0] === "b64"
+        ) &&
+        Object.keys(header).length === 3
+      ) {
+        throw new Error(`Invalid JWS header parameters for ${this.type}.`);
+      }
+
       let verified = false;
-      const [encodedheader, encodedsignature] = signature.split("..");
+
       const jws =
-        encodedheader + "." + data.toString("utf8") + "." + encodedsignature;
+        encodedHeader + "." + data.toString("utf8") + "." + encodedsignature;
       try {
         jose.JWS.verify(jws, jose.JWK.asKey(key.publicKeyJwk), {
           crit: ["b64"]
@@ -209,4 +246,4 @@ function joseVerifierFactory(key) {
   };
 }
 
-module.exports = LDKeyClassJose;
+module.exports = MyLinkedDataKeyClass2019;

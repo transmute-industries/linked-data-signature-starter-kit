@@ -2,9 +2,7 @@ const {
   suites: { LinkedDataSignature }
 } = require("jsonld-signatures");
 
-const util = require("./util");
-
-module.exports = class EncodedLinkedDataSignature extends LinkedDataSignature {
+module.exports = class MyLinkedDataSignature2019 extends LinkedDataSignature {
   /**
    * @param type {string} Provided by subclass.
    * @param alg {string} JWS alg provided by subclass.
@@ -32,6 +30,7 @@ module.exports = class EncodedLinkedDataSignature extends LinkedDataSignature {
    */
   constructor({
     type,
+    requiredKeyType,
     alg,
     LDKeyClass,
     creator,
@@ -39,13 +38,17 @@ module.exports = class EncodedLinkedDataSignature extends LinkedDataSignature {
     signer,
     key,
     proof,
+    proofSignatureKey,
     date,
     useNativeCanonize
   } = {}) {
     super({
       type,
       creator,
+      LDKeyClass,
       verificationMethod,
+      type,
+      alg,
       proof,
       date,
       useNativeCanonize
@@ -53,7 +56,8 @@ module.exports = class EncodedLinkedDataSignature extends LinkedDataSignature {
     this.alg = alg;
     this.LDKeyClass = LDKeyClass;
     this.signer = signer;
-    // this.verificationMethod = verificationMethod;
+    this.requiredKeyType = requiredKeyType;
+    this.proofSignatureKey = proofSignatureKey || "jws";
 
     if (key) {
       if (verificationMethod === undefined && creator === undefined) {
@@ -88,7 +92,9 @@ module.exports = class EncodedLinkedDataSignature extends LinkedDataSignature {
     }
 
     // console.log("sign verifyData", verifyData);
-    proof.jws = await this.signer.sign({ data: verifyData });
+    proof[this.proofSignatureKey] = await this.signer.sign({
+      data: verifyData
+    });
     return proof;
   }
 
@@ -104,46 +110,14 @@ module.exports = class EncodedLinkedDataSignature extends LinkedDataSignature {
    * @returns {Promise<{boolean}>} Resolves with the verification result.
    */
   async verifySignature({ verifyData, verificationMethod, proof }) {
-    // add payload into detached content signature
-    const [encodedHeader /*payload*/, , encodedSignature] = proof.jws.split(
-      "."
-    );
-
-    let header;
-    try {
-      header = JSON.parse(util.decodeBase64UrlToString(encodedHeader));
-    } catch (e) {
-      throw new Error("Could not parse JWS header; " + e);
-    }
-    if (!(header && typeof header === "object")) {
-      throw new Error("Invalid JWS header.");
-    }
-
-    // confirm header matches all expectations
-    if (
-      !(
-        header.alg === this.alg &&
-        header.b64 === false &&
-        Array.isArray(header.crit) &&
-        header.crit.length === 1 &&
-        header.crit[0] === "b64"
-      ) &&
-      Object.keys(header).length === 3
-    ) {
-      throw new Error(`Invalid JWS header parameters for ${this.type}.`);
-    }
-
-    // console.log("verify: ", verifyData);
-
     let { verifier } = this;
     if (!verifier) {
       const key = await this.LDKeyClass.from(verificationMethod);
       verifier = key.verifier();
     }
-
     return await verifier.verify({
       data: Buffer.from(verifyData),
-      signature: proof.jws
+      signature: proof[this.proofSignatureKey]
     });
   }
 

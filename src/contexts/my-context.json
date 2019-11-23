@@ -1,0 +1,19 @@
+{
+  "@context": [
+    {
+      "@version": 1.1,
+      "id": "@id",
+      "type": "@type"
+    },
+    "https://raw.githubusercontent.com/w3c/did-core/master/contexts/did-v0.11.jsonld",
+    {
+      "elem": "https://context.transmute.org/element/#",
+
+      "MyLinkedDataSignatureJws2019": "elem:MyLinkedDataSignatureJws2019",
+      "MyJwsVerificationKey2019": "elem:MyJwsVerificationKey2019",
+
+      "publicKeyJwk": "elem:publicKeyJwk",
+      "publicKeyHex": "elem:publicKeyHex"
+    }
+  ]
+}

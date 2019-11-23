@@ -1,0 +1,28 @@
+{
+  "name": "linked-data-signature-starter-kit",
+  "version": "1.0.0",
+  "description": "The purpose of this repo is to provide a starting point for developers wishing to implement JSON-LD Signatures.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/transmute-industries/linked-data-signature-starter-kit.git"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/transmute-industries/linked-data-signature-starter-kit/issues"
+  },
+  "homepage": "https://github.com/transmute-industries/linked-data-signature-starter-kit#readme",
+  "dependencies": {
+    "@panva/jose": "^1.9.2",
+    "jsonld": "^1.8.0",
+    "jsonld-signatures": "^4.4.0"
+  },
+  "devDependencies": {
+    "base64url": "^3.0.1",
+    "jest": "^24.9.0"
+  }
+}

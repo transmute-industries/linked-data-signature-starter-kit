@@ -64,8 +64,8 @@ class MyLinkedDataKeyClass2019 {
    *
    * @returns {{verify: Function}} Used to verify jsonld-signatures.
    */
-  verifier() {
-    return joseVerifierFactory(this);
+  verifier(key, alg, type) {
+    return joseVerifierFactory(this, alg, type);
   }
 
   /**
@@ -164,28 +164,30 @@ function joseSignerFactory(key) {
 
   return {
     async sign({ data }) {
-      const makeSig = () => {
-        const attachedJws = jose.JWS.sign(
-          Buffer.from(data),
-          jose.JWK.asKey(key.privateKeyJwk),
-          {
-            kid: key.privateKeyJwk.kid,
-            b64: false,
-            crit: ["b64"]
-          }
-        );
-        const [header, payload, signature] = attachedJws.split(".");
-        return [header, payload, signature];
+      const header = {
+        alg: "EdDSA",
+        // kid: key.privateKeyJwk.kid,
+        b64: false,
+        crit: ["b64"]
       };
+      // console.log(data);
 
-      let header, payload, signature;
-      // sometimes jose fails...
-      do {
-        [header, payload, signature] = await makeSig();
-        // console.log(signature);
-      } while (signature.length !== 86);
+      let encodedHeader = base64url.encode(JSON.stringify(header));
 
-      return header + ".." + signature;
+      const toBeSigned = Buffer.concat([
+        Buffer.from(encodedHeader + ".", "utf8"),
+        Buffer.from(data)
+      ]);
+
+      console.log(Buffer.from(toBeSigned).toString("hex"));
+
+      const flattened = jose.JWS.sign.flattened(
+        Buffer.from(toBeSigned),
+        jose.JWK.asKey(key.privateKeyJwk),
+        header
+      );
+
+      return flattened.protected + ".." + flattened.signature;
     }
   };
 }
@@ -200,10 +202,13 @@ function joseSignerFactory(key) {
  * @returns {{verify: Function}} An async verifier specific
  * to the key passed in.
  */
-function joseVerifierFactory(key) {
+function joseVerifierFactory(key, alg = this.alg, type = this.type) {
   return {
     async verify({ data, signature }) {
-      const [encodedHeader, payload, encodedsignature] = signature.split(".");
+      // const alg = this.alg; // "EdDSA";
+      // const type = this.type; //"Ed25519Signature2018";
+
+      const [encodedHeader, encodedSignature] = signature.split("..");
 
       let header;
       try {
@@ -215,10 +220,12 @@ function joseVerifierFactory(key) {
         throw new Error("Invalid JWS header.");
       }
 
+      // console.log(alg, type);
+
       // confirm header matches all expectations
       if (
         !(
-          header.alg === this.alg &&
+          header.alg === alg &&
           header.b64 === false &&
           Array.isArray(header.crit) &&
           header.crit.length === 1 &&
@@ -226,13 +233,22 @@ function joseVerifierFactory(key) {
         ) &&
         Object.keys(header).length === 3
       ) {
-        throw new Error(`Invalid JWS header parameters for ${this.type}.`);
+        throw new Error(`Invalid JWS header parameters for ${type}.`);
       }
 
       let verified = false;
 
-      const jws =
-        encodedHeader + "." + data.toString("utf8") + "." + encodedsignature;
+      const toBeSigned = Buffer.concat([
+        Buffer.from(encodedHeader),
+        Buffer.from("."),
+        data
+      ]);
+
+      console.log(toBeSigned.toString("hex"));
+      console.log("toBeSigned matches");
+
+      const jws = `${toBeSigned.toString("utf8")}.${encodedSignature}`;
+
       try {
         jose.JWS.verify(jws, jose.JWK.asKey(key.publicKeyJwk), {
           crit: ["b64"]

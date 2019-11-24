@@ -149,6 +149,7 @@ describe("ed25519.key.conversion", () => {
     };
 
     // console.log(privateKeyJwk);
+    // console.log(privateKeyJwk);
 
     const publicKeyBuffer = base64url.toBuffer(privateKeyJwk.x);
     const publicKeyBase58 = bs58.encode(publicKeyBuffer);

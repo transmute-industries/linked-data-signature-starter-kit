@@ -1,12 +1,8 @@
 const jsigs = require("jsonld-signatures");
-const { Ed25519KeyPair } = require("crypto-ld");
-const { Ed25519Signature2018 } = jsigs.suites;
 const { AuthenticationProofPurpose } = jsigs.purposes;
 
 const {
-  didKeyDoc,
   didKeyDoc2,
-  didKeypair,
   authenticateMeActionDoc,
   documentLoader
 } = require("../__fixtures__");
@@ -16,8 +12,8 @@ const {
   MyLinkedDataSignature2019
 } = require("../../index");
 
-describe("ed25519.interop", () => {
-  it("jsig sign / custom verify", async () => {
+describe("ed25519.custom", () => {
+  it("MyLinkedDataSignature2019 sign and verify", async () => {
     const myldKey = new MyLinkedDataKeyClass2019({
       id: "did:key:z6MkfXT3gnptvkda3fmLVKHdJrm8gUnmx3faSd1iVeCAxYtP",
       controller: "did:example:123",
@@ -39,10 +35,12 @@ describe("ed25519.interop", () => {
 
     const signed = await jsigs.sign(authenticateMeActionDoc, {
       documentLoader,
-      suite: new Ed25519Signature2018({
-        verificationMethod: myldKey.id,
-        key: new Ed25519KeyPair(didKeypair),
-        date: "2019-11-24T04:34:48Z"
+      suite: new MyLinkedDataSignature2019({
+        LDKeyClass: MyLinkedDataKeyClass2019,
+        linkedDataSigantureType: "Ed25519Signature2018",
+        linkedDataSignatureVerificationKeyType: "Ed25519VerificationKey2018",
+        alg: "EdDSA",
+        key: myldKey
       }),
       purpose: new AuthenticationProofPurpose({
         challenge: "abc",
@@ -50,10 +48,6 @@ describe("ed25519.interop", () => {
       }),
       compactProof: false
     });
-
-    // console.log(signed);
-
-    // need to do key conversion...
 
     const res = await jsigs.verify(signed, {
       suite: new MyLinkedDataSignature2019({

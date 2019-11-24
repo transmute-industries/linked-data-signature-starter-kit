@@ -93,9 +93,9 @@ const didKeyDoc2 = {
       controller: "did:key:z6MkfXT3gnptvkda3fmLVKHdJrm8gUnmx3faSd1iVeCAxYtP",
       publicKeyJwk: {
         crv: "Ed25519",
-        x: "VQ99N9eEYrkt9d7Iw-sq9tAbB7H_vX82iCNU4uBDYwA",
+        x: "D-5zI9uCYOAk_bN_QWD2XAQ_gIyHUh-6OY7nVk-Rg0g",
         kty: "OKP",
-        kid: "YDTVGm77-bIReuTAVmFnAdkpMWpuvM74wG6vAhfBYmU"
+        kid: "my-kid"
       }
     }
   ],

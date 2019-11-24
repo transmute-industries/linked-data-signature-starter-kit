@@ -20,10 +20,10 @@
   "dependencies": {
     "@panva/jose": "^1.9.2",
     "jsonld": "^1.8.0",
+    "base64url": "^3.0.1",
     "jsonld-signatures": "^4.4.0"
   },
   "devDependencies": {
-    "base64url": "^3.0.1",
     "jest": "^24.9.0"
   }
 }

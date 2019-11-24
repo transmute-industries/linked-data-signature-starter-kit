@@ -19,11 +19,16 @@
   "homepage": "https://github.com/transmute-industries/linked-data-signature-starter-kit#readme",
   "dependencies": {
     "@panva/jose": "^1.9.2",
-    "jsonld": "^1.8.0",
     "base64url": "^3.0.1",
+    "crypto-ld": "^3.7.0",
+    "did-method-key": "^0.2.0",
+    "jsonld": "^1.8.0",
     "jsonld-signatures": "^4.4.0"
   },
   "devDependencies": {
-    "jest": "^24.9.0"
+    "@trust/keyto": "^0.3.7",
+    "base-x": "^3.0.7",
+    "jest": "^24.9.0",
+    "node-forge": "^0.9.1"
   }
 }

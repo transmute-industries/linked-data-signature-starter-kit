@@ -54,7 +54,7 @@ module.exports = class MyLinkedDataSignature2019 extends LinkedDataSignature {
         this.signer = key.signer();
       }
       if (typeof key.verifier === "function") {
-        this.verifier = key.verifier();
+        this.verifier = key.verifier(key, this.alg, this.type);
       }
     }
   }
@@ -89,9 +89,10 @@ module.exports = class MyLinkedDataSignature2019 extends LinkedDataSignature {
    */
   async verifySignature({ verifyData, verificationMethod, proof }) {
     let { verifier } = this;
+
     if (!verifier) {
       const key = await this.LDKeyClass.from(verificationMethod);
-      verifier = key.verifier();
+      verifier = key.verifier(key, this.alg, this.type);
     }
     return await verifier.verify({
       data: Buffer.from(verifyData),

@@ -16,8 +16,8 @@ const { AssertionProofPurpose } = jsigs.purposes;
 describe("MyLinkedDataSignature2019", () => {
   it("constructor works", async () => {
     const s = new MyLinkedDataSignature2019({
-      type: "MyLinkedDataSignature2019",
-      requiredKeyType: "MyJwsVerificationKey2019"
+      linkedDataSigantureType: "MyLinkedDataSignature2019",
+      linkedDataSignatureVerificationKeyType: "MyJwsVerificationKey2019"
     });
     expect(s.type).toBe("MyLinkedDataSignature2019");
     expect(s.requiredKeyType).toBe("MyJwsVerificationKey2019");
@@ -34,11 +34,10 @@ describe("MyLinkedDataSignature2019", () => {
     const signed = await jsigs.sign(doc, {
       suite: new MyLinkedDataSignature2019({
         LDKeyClass: MyLinkedDataKeyClass2019,
-        type: "MyLinkedDataSignature2019",
-        requiredKeyType: "MyJwsVerificationKey2019",
+        linkedDataSigantureType: "MyLinkedDataSignature2019",
+        linkedDataSignatureVerificationKeyType: "MyJwsVerificationKey2019",
         alg: "ES256K",
-        key,
-        verificationMethod: "did:example:123#" + publicKeyJwk.kid
+        key
       }),
       purpose: new AssertionProofPurpose(),
       documentLoader: documentLoader,
@@ -50,12 +49,10 @@ describe("MyLinkedDataSignature2019", () => {
     const res = await jsigs.verify(signed, {
       suite: new MyLinkedDataSignature2019({
         LDKeyClass: MyLinkedDataKeyClass2019,
-        type: "MyLinkedDataSignature2019",
-        requiredKeyType: "MyJwsVerificationKey2019",
+        linkedDataSigantureType: "MyLinkedDataSignature2019",
+        linkedDataSignatureVerificationKeyType: "MyJwsVerificationKey2019",
         alg: "ES256K",
-        key,
-        verificationMethod: "did:example:123#" + publicKeyJwk.kid,
-        proof: "MyLinkedDataSignature2019"
+        key
       }),
       purpose: new AssertionProofPurpose(),
       documentLoader: documentLoader,

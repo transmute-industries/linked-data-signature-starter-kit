@@ -4,72 +4,51 @@ const {
 
 module.exports = class MyLinkedDataSignature2019 extends LinkedDataSignature {
   /**
-   * @param type {string} Provided by subclass.
+   * @param linkedDataSigantureType {string} The name of the signature suite.
+   * @param linkedDataSignatureVerificationKeyType {string} The name verification key type for the signature suite.
+   *
    * @param alg {string} JWS alg provided by subclass.
    * @param [LDKeyClass] {LDKeyClass} provided by subclass or subclass
    *   overrides `getVerificationMethod`.
    *
-   * One of these parameters is required to use a suite for signing:
-   *
-   * @param [creator] {string} A key id URL to the paired public key.
-   * @param [verificationMethod] {string} A key id URL to the paired public key.
    *
    * This parameter is required for signing:
    *
    * @param [signer] {function} an optional signer.
    *
-   * Advanced optional parameters and overrides:
-   *
-   * @param [proof] {object} a JSON-LD document with options to use for
-   *   the `proof` node (e.g. any other custom fields can be provided here
-   *   using a context different from security-v2).
+   * @param [proofSignatureKey] {string} the property in the proof that will contain the signature.
    * @param [date] {string|Date} signing date to use if not passed.
    * @param [key] {LDKeyPair} an optional crypto-ld KeyPair.
    * @param [useNativeCanonize] {boolean} true to use a native canonize
    *   algorithm.
    */
   constructor({
-    type,
-    requiredKeyType,
+    linkedDataSigantureType,
+    linkedDataSignatureVerificationKeyType,
     alg,
     LDKeyClass,
-    creator,
-    verificationMethod,
     signer,
     key,
-    proof,
     proofSignatureKey,
     date,
     useNativeCanonize
   } = {}) {
     super({
-      type,
-      creator,
+      type: linkedDataSigantureType,
       LDKeyClass,
-      verificationMethod,
-      type,
       alg,
-      proof,
       date,
       useNativeCanonize
     });
     this.alg = alg;
     this.LDKeyClass = LDKeyClass;
     this.signer = signer;
-    this.requiredKeyType = requiredKeyType;
+    this.requiredKeyType = linkedDataSignatureVerificationKeyType;
     this.proofSignatureKey = proofSignatureKey || "jws";
 
     if (key) {
-      if (verificationMethod === undefined && creator === undefined) {
-        const publicKey = key.publicNode();
-        if (publicKey.owner) {
-          // use legacy signature terms
-          this.creator = publicKey.id;
-        } else {
-          // use newer signature terms
-          this.verificationMethod = publicKey.id;
-        }
-      }
+      const publicKey = key.publicNode();
+      this.verificationMethod = publicKey.id;
       this.key = key;
       if (typeof key.signer === "function") {
         this.signer = key.signer();
@@ -91,7 +70,6 @@ module.exports = class MyLinkedDataSignature2019 extends LinkedDataSignature {
       throw new Error("A signer API has not been specified.");
     }
 
-    // console.log("sign verifyData", verifyData);
     proof[this.proofSignatureKey] = await this.signer.sign({
       data: verifyData
     });

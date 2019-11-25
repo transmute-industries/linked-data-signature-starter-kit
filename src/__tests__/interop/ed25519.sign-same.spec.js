@@ -14,51 +14,64 @@ const {
   MyLinkedDataSignature2019
 } = require("../../index");
 
+const {
+  publicKeyPemToPubliKeyJwk,
+  privateKeyPemToPrivateKeyJwk,
+
+  publicKeyBase58ToPublicKeyJwk,
+  privateKeyBase58ToPrivateKeyJwk,
+
+  publicKeyJwkToPublicKeyBase58,
+  privateKeyJwkToPrivateKeyBase58,
+
+  publicKeyBase58ToPublicKeyPem,
+  privateKeyBase58ToPrivateKeyPem,
+
+  publicKeyPemToPublicKeyBase58,
+  privateKeyPemToPrivateKeyBase58
+} = require("./utils");
+
 describe("ed25519.sign-same", () => {
   it("signatures match", async () => {
+    const publicKeyPem =
+      "-----BEGIN PUBLIC KEY-----\n" +
+      "MCowBQYDK2VwAyEAh83ufcOAO9zVigHCgOOTp8waN/ycH4xnPRvn45yu6gw=\n" +
+      "-----END PUBLIC KEY-----\n";
+    const privateKeyPem =
+      "-----BEGIN PRIVATE KEY-----\n" +
+      "MC4CAQAwBQYDK2VwBCIEIDKq/xOBEOdQ8c1R4e+BxMuhdCSMpKg568IHiTsYi3k1\n" +
+      "-----END PRIVATE KEY-----\n";
+
     const myldKey = new MyLinkedDataKeyClass2019({
       id: "did:key:z6MkfXT3gnptvkda3fmLVKHdJrm8gUnmx3faSd1iVeCAxYtP",
       controller: "did:example:123",
       type: "Ed25519VerificationKey2018",
-      privateKeyJwk: {
-        crv: "Ed25519",
-        x: "D-5zI9uCYOAk_bN_QWD2XAQ_gIyHUh-6OY7nVk-Rg0g",
-        d: "zA65gfNF5g2CLKQnl8uRbGI2IRjJIE7PTZki7Qin9bw",
-        kty: "OKP",
-        kid: "my-kid"
-      },
-      publicKeyJwk: {
-        crv: "Ed25519",
-        x: "D-5zI9uCYOAk_bN_QWD2XAQ_gIyHUh-6OY7nVk-Rg0g",
-        kty: "OKP",
-        kid: "my-kid"
-      }
+      privateKeyJwk: privateKeyPemToPrivateKeyJwk({
+        privateKeyPem,
+        publicKeyPem
+      }),
+      publicKeyJwk: publicKeyPemToPubliKeyJwk(publicKeyPem)
     });
 
-    const publicKeyBuffer = base64url.toBuffer(myldKey.publicKey.x);
-    const publicKeyBase58 = bs58.encode(publicKeyBuffer);
-
-    const privateKeyBase58 = bs58.encode(
-      Buffer.concat([
-        base64url.toBuffer(myldKey.privateKey.d),
-        base64url.toBuffer(myldKey.privateKey.x)
-      ])
-    );
+    const edKey = new Ed25519KeyPair({
+      id: "did:key:z6MkfXT3gnptvkda3fmLVKHdJrm8gUnmx3faSd1iVeCAxYtP",
+      controller: "did:example:123",
+      type: "Ed25519VerificationKey2018",
+      publicKeyBase58: publicKeyPemToPublicKeyBase58(publicKeyPem),
+      privateKeyBase58: privateKeyPemToPrivateKeyBase58({
+        publicKeyPem,
+        privateKeyPem
+      })
+    });
 
     const signed = await jsigs.sign(
       { ...authenticateMeActionDoc },
       {
         documentLoader,
         suite: new Ed25519Signature2018({
+          date: "2019-11-24T04:34:48Z",
           verificationMethod: myldKey.id,
-          key: new Ed25519KeyPair({
-            id: "did:key:z6MkfXT3gnptvkda3fmLVKHdJrm8gUnmx3faSd1iVeCAxYtP",
-            controller: "did:example:123",
-            type: "Ed25519VerificationKey2018",
-            publicKeyBase58,
-            privateKeyBase58
-          }),
-          date: "2019-11-24T04:34:48Z"
+          key: edKey
         }),
         purpose: new AuthenticationProofPurpose({
           challenge: "abc",
@@ -67,7 +80,6 @@ describe("ed25519.sign-same", () => {
         compactProof: false
       }
     );
-
     const signed2 = await jsigs.sign(
       { ...authenticateMeActionDoc },
       {
@@ -87,7 +99,6 @@ describe("ed25519.sign-same", () => {
         compactProof: false
       }
     );
-
-    expect(signed.proof.jws).toBe(signed2.proof.jws);
+    expect(signed2.proof.jws).toBe(signed.proof.jws);
   });
 });

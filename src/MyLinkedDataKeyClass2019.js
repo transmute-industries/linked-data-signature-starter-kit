@@ -170,19 +170,19 @@ function joseSignerFactory(key) {
         b64: false,
         crit: ["b64"]
       };
-      // console.log(data);
+      // // console.log(data);
 
       let encodedHeader = base64url.encode(JSON.stringify(header));
 
       const toBeSigned = Buffer.concat([
         Buffer.from(encodedHeader + ".", "utf8"),
-        Buffer.from(data)
+        Buffer.from(data.buffer, data.byteOffset, data.length)
       ]);
 
-      console.log(Buffer.from(toBeSigned).toString("hex"));
+      const justPayload = toBeSigned.slice(57, toBeSigned.length);
 
       const flattened = jose.JWS.sign.flattened(
-        Buffer.from(toBeSigned),
+        justPayload,
         jose.JWK.asKey(key.privateKeyJwk),
         header
       );

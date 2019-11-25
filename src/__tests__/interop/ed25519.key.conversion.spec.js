@@ -15,235 +15,87 @@ const {
   util: { ByteBuffer }
 } = forge;
 
+const {
+  publicKeyPemToPubliKeyJwk,
+  privateKeyPemToPrivateKeyJwk,
+
+  publicKeyBase58ToPublicKeyJwk,
+  privateKeyBase58ToPrivateKeyJwk,
+
+  publicKeyJwkToPublicKeyBase58,
+  privateKeyJwkToPrivateKeyBase58,
+
+  publicKeyBase58ToPublicKeyPem,
+  privateKeyBase58ToPrivateKeyPem,
+
+  publicKeyPemToPublicKeyBase58,
+  privateKeyPemToPrivateKeyBase58
+} = require("./utils");
+
 const { didKeypair } = require("../__fixtures__");
 
 describe("ed25519.key.conversion", () => {
-  it("base58 to pem to jwk to did:key", async () => {
-    const privateKeyDerEncode = ({ privateKeyBytes, seedBytes }) => {
-      if (!(privateKeyBytes || seedBytes)) {
-        throw new TypeError("`privateKeyBytes` or `seedBytes` is required.");
-      }
-      if (
-        !privateKeyBytes &&
-        !(Buffer.isBuffer(seedBytes) && seedBytes.length === 32)
-      ) {
-        throw new TypeError("`seedBytes` must be a 32 byte Buffer.");
-      }
-      if (
-        !seedBytes &&
-        !(Buffer.isBuffer(privateKeyBytes) && privateKeyBytes.length === 64)
-      ) {
-        throw new TypeError("`privateKeyBytes` must be a 64 byte Buffer.");
-      }
-      let p;
-      if (seedBytes) {
-        p = seedBytes;
-      } else {
-        // extract the first 32 bytes of the 64 byte private key representation
-        p = Buffer.from(privateKeyBytes.buffer, privateKeyBytes.byteOffset, 32);
-      }
-      const keyBuffer = new ByteBuffer(p);
-
-      const asn1Key = asn1.create(
-        asn1.UNIVERSAL,
-        asn1.Type.OCTETSTRING,
-        false,
-        keyBuffer.getBytes()
-      );
-
-      const a = asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
-        asn1.create(
-          asn1.Class.UNIVERSAL,
-          asn1.Type.INTEGER,
-          false,
-          asn1.integerToDer(0).getBytes()
-        ),
-        // privateKeyAlgorithm
-        asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
-          asn1.create(
-            asn1.Class.UNIVERSAL,
-            asn1.Type.OID,
-            false,
-            asn1.oidToDer(oids.EdDSA25519).getBytes()
-          )
-        ]),
-        // private key
-        asn1.create(
-          asn1.Class.UNIVERSAL,
-          asn1.Type.OCTETSTRING,
-          false,
-          asn1.toDer(asn1Key).getBytes()
-        )
-      ]);
-
-      const privateKeyDer = asn1.toDer(a);
-      return Buffer.from(privateKeyDer.getBytes(), "binary");
-    };
-
-    const publicKeyDerEncode = ({ publicKeyBytes }) => {
-      if (!(Buffer.isBuffer(publicKeyBytes) && publicKeyBytes.length === 32)) {
-        throw new TypeError("`publicKeyBytes` must be a 32 byte Buffer.");
-      }
-      // add a zero byte to the front of the publicKeyBytes, this results in
-      // the bitstring being 256 bits vs. 170 bits (without padding)
-      const zeroBuffer = Buffer.from(new Uint8Array([0]));
-      const keyBuffer = new ByteBuffer(
-        Buffer.concat([zeroBuffer, publicKeyBytes])
-      );
-
-      const a = asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
-        asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
-          asn1.create(
-            asn1.Class.UNIVERSAL,
-            asn1.Type.OID,
-            false,
-            asn1.oidToDer(oids.EdDSA25519).getBytes()
-          )
-        ]),
-        // public key
-        asn1.create(
-          asn1.Class.UNIVERSAL,
-          asn1.Type.BITSTRING,
-          false,
-          keyBuffer.getBytes()
-        )
-      ]);
-
-      const publicKeyDer = asn1.toDer(a);
-      return Buffer.from(publicKeyDer.getBytes(), "binary");
-    };
-
-    const publicKey = crypto.createPublicKey({
-      key: publicKeyDerEncode({
-        publicKeyBytes: bs58.decode(didKeypair.publicKeyBase58)
-      }),
-      format: "der",
-      type: "spki"
-    });
-
-    const privateKey = crypto.createPrivateKey({
-      key: privateKeyDerEncode({
-        privateKeyBytes: bs58.decode(didKeypair.privateKeyBase58)
-      }),
-      format: "der",
-      type: "pkcs8"
-    });
-
-    const publicKeyBytes = publicKeyFromAsn1(
-      asn1.fromDer(
-        new ByteBuffer(publicKey.export({ format: "der", type: "spki" }))
-      )
+  it("base58 to jwk", async () => {
+    const publicKeyJwk = publicKeyBase58ToPublicKeyJwk(
+      didKeypair.publicKeyBase58
     );
-    const { privateKeyBytes } = privateKeyFromAsn1(
-      asn1.fromDer(
-        new ByteBuffer(privateKey.export({ format: "der", type: "pkcs8" }))
-      )
+    const privateKeyJwk = privateKeyBase58ToPrivateKeyJwk(
+      didKeypair.privateKeyBase58
     );
-
-    const privateKeyJwk = {
+    expect(publicKeyJwk).toEqual({
       crv: "Ed25519",
-      x: base64url.encode(publicKeyBytes),
-      d: base64url.encode(privateKeyBytes),
+      x: "D-5zI9uCYOAk_bN_QWD2XAQ_gIyHUh-6OY7nVk-Rg0g",
       kty: "OKP",
-      kid: "my-kid"
-    };
-
-    // console.log(privateKeyJwk);
-    // console.log(privateKeyJwk);
-
-    const publicKeyBuffer = base64url.toBuffer(privateKeyJwk.x);
-    const publicKeyBase58 = bs58.encode(publicKeyBuffer);
-    expect(publicKeyBase58).toBe(
-      "25C16YaTbD96wAvdokKnTmD8ruWvYARDkc6nfNEA3L71"
-    );
-
-    const privateKeyBase58 = bs58.encode(
-      Buffer.concat([
-        base64url.toBuffer(privateKeyJwk.d),
-        base64url.toBuffer(privateKeyJwk.x)
-      ])
-    );
-    expect(privateKeyBase58).toBe(
-      "55dKnusKVZjGK9rtTQgT3usTnALuChkzQpoksz4jES5G7AKMCpQCBt3azfko5oTMQD11gPxQ1bFRAYWSwcYSPdPV"
-    );
-    const edKey = new Ed25519KeyPair({
-      publicKeyBase58,
-      privateKeyBase58
+      kid: "7lMt97NZhIN9UFr-5xRoJYFhW_Gujx_j4l4BJlItEY8"
     });
-    const didDoc = keyToDidDoc(edKey);
-    expect(didDoc.id).toBe(
-      "did:key:z6MkfXT3gnptvkda3fmLVKHdJrm8gUnmx3faSd1iVeCAxYtP"
-    );
+
+    expect(privateKeyJwk).toEqual({
+      crv: "Ed25519",
+      x: "D-5zI9uCYOAk_bN_QWD2XAQ_gIyHUh-6OY7nVk-Rg0g",
+      d: "zA65gfNF5g2CLKQnl8uRbGI2IRjJIE7PTZki7Qin9bw",
+      kty: "OKP",
+      kid: "7lMt97NZhIN9UFr-5xRoJYFhW_Gujx_j4l4BJlItEY8"
+    });
   });
 
-  it("PEM to did:key", async () => {
+  it("pem to jwk", async () => {
     // const keypair = crypto.generateKeyPairSync("ed25519", {
     //   publicKeyEncoding: { format: "pem", type: "spki" },
     //   privateKeyEncoding: { format: "pem", type: "pkcs8" }
     // });
-    const { publicKey, privateKey } = {
-      publicKey:
-        "-----BEGIN PUBLIC KEY-----\n" +
-        "MCowBQYDK2VwAyEAh83ufcOAO9zVigHCgOOTp8waN/ycH4xnPRvn45yu6gw=\n" +
-        "-----END PUBLIC KEY-----\n",
-      privateKey:
-        "-----BEGIN PRIVATE KEY-----\n" +
-        "MC4CAQAwBQYDK2VwBCIEIDKq/xOBEOdQ8c1R4e+BxMuhdCSMpKg568IHiTsYi3k1\n" +
-        "-----END PRIVATE KEY-----\n"
-    };
-    const publicKeyBytes = publicKeyFromAsn1(
-      asn1.fromDer(
-        new ByteBuffer(
-          crypto
-            .createPublicKey(publicKey, "pem", "spki")
-            .export({ format: "der", type: "spki" })
-        )
-      )
-    );
-    const { privateKeyBytes } = privateKeyFromAsn1(
-      asn1.fromDer(
-        new ByteBuffer(
-          crypto
-            .createPrivateKey(privateKey, "pem", "pkcs8")
-            .export({ format: "der", type: "pkcs8" })
-        )
-      )
-    );
+    const publicKeyPem =
+      "-----BEGIN PUBLIC KEY-----\n" +
+      "MCowBQYDK2VwAyEAh83ufcOAO9zVigHCgOOTp8waN/ycH4xnPRvn45yu6gw=\n" +
+      "-----END PUBLIC KEY-----\n";
+    const privateKeyPem =
+      "-----BEGIN PRIVATE KEY-----\n" +
+      "MC4CAQAwBQYDK2VwBCIEIDKq/xOBEOdQ8c1R4e+BxMuhdCSMpKg568IHiTsYi3k1\n" +
+      "-----END PRIVATE KEY-----\n";
 
-    const privateKeyJwk = {
-      crv: "Ed25519",
-      x: base64url.encode(publicKeyBytes),
-      d: base64url.encode(privateKeyBytes),
-      kty: "OKP",
-      kid: "my-kid"
-    };
+    const publicKeyJwk = publicKeyPemToPubliKeyJwk(publicKeyPem);
 
-    const publicKeyBuffer = base64url.toBuffer(privateKeyJwk.x);
-    const publicKeyBase58 = bs58.encode(publicKeyBuffer);
-    expect(publicKeyBase58).toBe(
-      "A98AdwjnAHkF2zk61mPYVx216LW58Lc6HiM8e4b4Cbpw"
-    );
-
-    const privateKeyBase58 = bs58.encode(
-      Buffer.concat([
-        base64url.toBuffer(privateKeyJwk.d),
-        base64url.toBuffer(privateKeyJwk.x)
-      ])
-    );
-    expect(privateKeyBase58).toBe(
-      "21knKoyCy3QqjGwkZS5RbqM5QuL3nanry2Pm367M5oMsMTTX6NeNAup2S4cKYYN27h9PHa3Aqdcaihw6jYzy8H4f"
-    );
-    const edKey = new Ed25519KeyPair({
-      publicKeyBase58,
-      privateKeyBase58
+    const privateKeyJwk = privateKeyPemToPrivateKeyJwk({
+      privateKeyPem,
+      publicKeyPem
     });
-    const didDoc = keyToDidDoc(edKey);
-    expect(didDoc.id).toBe(
-      "did:key:z6MkobPDEBzDVqEi9VanhLMPM3ZzuumvYDrSyjG4ULZ57pcK"
-    );
+
+    expect(publicKeyJwk).toEqual({
+      crv: "Ed25519",
+      x: "h83ufcOAO9zVigHCgOOTp8waN_ycH4xnPRvn45yu6gw",
+      kty: "OKP",
+      kid: "8R_gUPjBoJ_nf39_G7VLGWNuhL5etuW7zvS46kwYN6Q"
+    });
+
+    expect(privateKeyJwk).toEqual({
+      crv: "Ed25519",
+      x: "h83ufcOAO9zVigHCgOOTp8waN_ycH4xnPRvn45yu6gw",
+      d: "Mqr_E4EQ51DxzVHh74HEy6F0JIykqDnrwgeJOxiLeTU",
+      kty: "OKP",
+      kid: "8R_gUPjBoJ_nf39_G7VLGWNuhL5etuW7zvS46kwYN6Q"
+    });
   });
 
-  it("JOSE to did:key", async () => {
+  it("jwk to base58", async () => {
     // const key = jose.JWK.generateSync("OKP", "Ed25519").toJWK(true);
     const privateKeyJwk = {
       crv: "Ed25519",
@@ -252,28 +104,59 @@ describe("ed25519.key.conversion", () => {
       kty: "OKP",
       kid: "YDTVGm77-bIReuTAVmFnAdkpMWpuvM74wG6vAhfBYmU"
     };
-    const publicKeyBuffer = base64url.toBuffer(privateKeyJwk.x);
-    const publicKeyBase58 = bs58.encode(publicKeyBuffer);
+
+    const publicKeyBase58 = publicKeyJwkToPublicKeyBase58(privateKeyJwk);
+
+    const privateKeyBase58 = privateKeyJwkToPrivateKeyBase58(privateKeyJwk);
+
     expect(publicKeyBase58).toBe(
       "6j3MURCDR8WoHgJ81U8mLME9H5uEcEx4yU74QrAgHbDq"
     );
 
-    const privateKeyBase58 = bs58.encode(
-      Buffer.concat([
-        base64url.toBuffer(privateKeyJwk.d),
-        base64url.toBuffer(privateKeyJwk.x)
-      ])
-    );
     expect(privateKeyBase58).toBe(
       "2Uit2seAJ6Wn3Unynn6t8DpfREDpiMZrnakw2miWMVDQQY6iRA1LuG7c6HDdyLwUREKBy42rR4MUsb5KcJf33qwM"
     );
-    const edKey = new Ed25519KeyPair({
-      publicKeyBase58,
-      privateKeyBase58
+  });
+
+  it("base58 to pem", async () => {
+    const publicKeyPem = publicKeyBase58ToPublicKeyPem(
+      didKeypair.publicKeyBase58
+    );
+    const privateKeyPem = privateKeyBase58ToPrivateKeyPem(
+      didKeypair.privateKeyBase58
+    );
+
+    expect(publicKeyPem).toBe(`-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAD+5zI9uCYOAk/bN/QWD2XAQ/gIyHUh+6OY7nVk+Rg0g=
+-----END PUBLIC KEY-----
+`);
+
+    expect(privateKeyPem).toBe(`-----BEGIN PRIVATE KEY-----
+MC4CAQAwBQYDK2VwBCIEIMwOuYHzReYNgiykJ5fLkWxiNiEYySBOz02ZIu0Ip/W8
+-----END PRIVATE KEY-----
+`);
+  });
+
+  it("pem to base58", async () => {
+    const publicKeyPem =
+      "-----BEGIN PUBLIC KEY-----\n" +
+      "MCowBQYDK2VwAyEAh83ufcOAO9zVigHCgOOTp8waN/ycH4xnPRvn45yu6gw=\n" +
+      "-----END PUBLIC KEY-----\n";
+    const privateKeyPem =
+      "-----BEGIN PRIVATE KEY-----\n" +
+      "MC4CAQAwBQYDK2VwBCIEIDKq/xOBEOdQ8c1R4e+BxMuhdCSMpKg568IHiTsYi3k1\n" +
+      "-----END PRIVATE KEY-----\n";
+
+    const publicKeyBase58 = publicKeyPemToPublicKeyBase58(publicKeyPem);
+    const privateKeyBase58 = privateKeyPemToPrivateKeyBase58({
+      privateKeyPem,
+      publicKeyPem
     });
-    const didDoc = keyToDidDoc(edKey);
-    expect(didDoc.id).toBe(
-      "did:key:z6MkkBJQ4fSekg1GQB8ph36cBSn96fB628CRfV1zF88hCp1D"
+    expect(publicKeyBase58).toBe(
+      "A98AdwjnAHkF2zk61mPYVx216LW58Lc6HiM8e4b4Cbpw"
+    );
+    expect(privateKeyBase58).toBe(
+      "21knKoyCy3QqjGwkZS5RbqM5QuL3nanry2Pm367M5oMsMTTX6NeNAup2S4cKYYN27h9PHa3Aqdcaihw6jYzy8H4f"
     );
   });
 });

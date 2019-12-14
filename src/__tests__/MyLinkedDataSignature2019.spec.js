@@ -3,12 +3,7 @@ const {
   MyLinkedDataSignature2019
 } = require("../index");
 
-const {
-  publicKeyJwk,
-  privateKeyJwk,
-  documentLoader,
-  doc
-} = require("./__fixtures__");
+const { myLdKey, documentLoader, doc } = require("./__fixtures__");
 
 const jsigs = require("jsonld-signatures");
 const { AssertionProofPurpose } = jsigs.purposes;
@@ -25,9 +20,8 @@ describe("MyLinkedDataSignature2019", () => {
 
   it("MyLinkedDataSignature2019", async () => {
     const key = new MyLinkedDataKeyClass2019({
-      publicKeyJwk,
-      privateKeyJwk,
-      id: "did:example:123#" + publicKeyJwk.kid,
+      ...myLdKey,
+      id: "did:example:123#" + myLdKey.id,
       controller: "did:example:123"
     });
 
@@ -36,7 +30,7 @@ describe("MyLinkedDataSignature2019", () => {
         LDKeyClass: MyLinkedDataKeyClass2019,
         linkedDataSigantureType: "MyLinkedDataSignature2019",
         linkedDataSignatureVerificationKeyType: "MyJwsVerificationKey2019",
-        alg: "ES256K",
+        alg: "EdDSA",
         key
       }),
       purpose: new AssertionProofPurpose(),
@@ -51,7 +45,7 @@ describe("MyLinkedDataSignature2019", () => {
         LDKeyClass: MyLinkedDataKeyClass2019,
         linkedDataSigantureType: "MyLinkedDataSignature2019",
         linkedDataSignatureVerificationKeyType: "MyJwsVerificationKey2019",
-        alg: "ES256K",
+        alg: "EdDSA",
         key
       }),
       purpose: new AssertionProofPurpose(),
@@ -60,6 +54,7 @@ describe("MyLinkedDataSignature2019", () => {
     });
 
     const { verified } = res;
+
     expect(verified).toBe(true);
   });
 });

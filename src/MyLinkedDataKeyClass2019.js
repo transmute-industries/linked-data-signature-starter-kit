@@ -1,4 +1,4 @@
-const jose = require("@panva/jose");
+const jose = require("jose");
 const base64url = require("base64url");
 
 class MyLinkedDataKeyClass2019 {
@@ -6,8 +6,9 @@ class MyLinkedDataKeyClass2019 {
    * @param {KeyPairOptions} options - The options to use.
    * @param {string} options.id - The key ID.
    * @param {string} options.controller - The key controller.
-   * @param {string} options.publicKeyJwk - The Base58 encoded Public Key.
-   * @param {string} options.privateKeyJwk - The Base58 Private Key.
+   * @param {string} options.publicKeyJwk - The JWK encoded Public Key.
+   * @param {string} options.privateKeyJwk - The JWK Private Key.
+   * @param {string} options.alg - The JWS alg for this key.
    */
   constructor(options = {}) {
     this.id = options.id;
@@ -15,21 +16,22 @@ class MyLinkedDataKeyClass2019 {
     this.controller = options.controller;
     this.privateKeyJwk = options.privateKeyJwk;
     this.publicKeyJwk = options.publicKeyJwk;
+    this.alg = options.alg;
   }
 
   /**
-   * Returns the Base58 encoded public key.
+   * Returns the JWK encoded public key.
    *
-   * @returns {string} The Base58 encoded public key.
+   * @returns {string} The JWK encoded public key.
    */
   get publicKey() {
     return this.publicKeyJwk;
   }
 
   /**
-   * Returns the Base58 encoded private key.
+   * Returns the JWK encoded private key.
    *
-   * @returns {string} The Base58 encoded private key.
+   * @returns {string} The JWK encoded private key.
    */
   get privateKey() {
     return this.privateKeyJwk;
@@ -85,7 +87,7 @@ class MyLinkedDataKeyClass2019 {
   /**
    * Generates and returns a public key fingerprint.
    *
-   * @param {string} publicKeyJwk - The base58 encoded public key material.
+   * @param {string} publicKeyJwk - The jwk encoded public key material.
    *
    * @returns {string} The fingerprint.
    */
@@ -107,7 +109,7 @@ class MyLinkedDataKeyClass2019 {
   /**
    * Tests whether the fingerprint was generated from a given key pair.
    *
-   * @param {string} fingerprint - A Base58 public key.
+   * @param {string} fingerprint - A JWK public key.
    *
    * @returns {Object} An object indicating valid is true or false.
    */
@@ -164,28 +166,18 @@ function joseSignerFactory(key) {
 
   return {
     async sign({ data }) {
-      const makeSig = () => {
-        const attachedJws = jose.JWS.sign(
-          Buffer.from(data),
-          jose.JWK.asKey(key.privateKeyJwk),
-          {
-            kid: key.privateKeyJwk.kid,
-            b64: false,
-            crit: ["b64"]
-          }
-        );
-        const [header, payload, signature] = attachedJws.split(".");
-        return [header, payload, signature];
+      const header = {
+        alg: "EdDSA",
+        b64: false,
+        crit: ["b64"]
       };
-
-      let header, payload, signature;
-      // sometimes jose fails...
-      do {
-        [header, payload, signature] = await makeSig();
-        // console.log(signature);
-      } while (signature.length !== 86);
-
-      return header + ".." + signature;
+      toBeSigned = Buffer.from(data.buffer, data.byteOffset, data.length);
+      const flattened = jose.JWS.sign.flattened(
+        toBeSigned,
+        jose.JWK.asKey(key.privateKeyJwk),
+        header
+      );
+      return flattened.protected + ".." + flattened.signature;
     }
   };
 }
@@ -200,11 +192,20 @@ function joseSignerFactory(key) {
  * @returns {{verify: Function}} An async verifier specific
  * to the key passed in.
  */
-function joseVerifierFactory(key) {
+joseVerifierFactory = key => {
+  if (!key.publicKeyJwk) {
+    return {
+      async sign() {
+        throw new Error("No public key to verify with.");
+      }
+    };
+  }
+
   return {
     async verify({ data, signature }) {
-      const [encodedHeader, payload, encodedsignature] = signature.split(".");
-
+      const alg = key.alg; // Ex: "EdDSA";
+      const type = key.type; //Ex: "Ed25519Signature2018";
+      const [encodedHeader, encodedSignature] = signature.split("..");
       let header;
       try {
         header = JSON.parse(base64url.decode(encodedHeader));
@@ -218,7 +219,7 @@ function joseVerifierFactory(key) {
       // confirm header matches all expectations
       if (
         !(
-          header.alg === this.alg &&
+          header.alg === alg &&
           header.b64 === false &&
           Array.isArray(header.crit) &&
           header.crit.length === 1 &&
@@ -226,17 +227,26 @@ function joseVerifierFactory(key) {
         ) &&
         Object.keys(header).length === 3
       ) {
-        throw new Error(`Invalid JWS header parameters for ${this.type}.`);
+        throw new Error(`Invalid JWS header parameters for ${type}.`);
       }
 
       let verified = false;
 
-      const jws =
-        encodedHeader + "." + data.toString("utf8") + "." + encodedsignature;
+      const detached = {
+        protected: encodedHeader,
+        signature: encodedSignature
+      };
+
+      const payload = Buffer.from(data.buffer, data.byteOffset, data.length);
+
       try {
-        jose.JWS.verify(jws, jose.JWK.asKey(key.publicKeyJwk), {
-          crit: ["b64"]
-        });
+        jose.JWS.verify(
+          { ...detached, payload },
+          jose.JWK.asKey(key.publicKeyJwk),
+          {
+            crit: ["b64"]
+          }
+        );
         verified = true;
       } catch (e) {
         console.error("An error occurred when verifying signature: ", e);
@@ -244,6 +254,6 @@ function joseVerifierFactory(key) {
       return verified;
     }
   };
-}
+};
 
 module.exports = MyLinkedDataKeyClass2019;

@@ -6,8 +6,9 @@ class MyLinkedDataKeyClass2019 {
    * @param {KeyPairOptions} options - The options to use.
    * @param {string} options.id - The key ID.
    * @param {string} options.controller - The key controller.
-   * @param {string} options.publicKeyJwk - The Base58 encoded Public Key.
-   * @param {string} options.privateKeyJwk - The Base58 Private Key.
+   * @param {string} options.publicKeyJwk - The JWK encoded Public Key.
+   * @param {string} options.privateKeyJwk - The JWK Private Key.
+   * @param {string} options.alg - The JWS alg for this key.
    */
   constructor(options = {}) {
     this.id = options.id;
@@ -19,18 +20,18 @@ class MyLinkedDataKeyClass2019 {
   }
 
   /**
-   * Returns the Base58 encoded public key.
+   * Returns the JWK encoded public key.
    *
-   * @returns {string} The Base58 encoded public key.
+   * @returns {string} The JWK encoded public key.
    */
   get publicKey() {
     return this.publicKeyJwk;
   }
 
   /**
-   * Returns the Base58 encoded private key.
+   * Returns the JWK encoded private key.
    *
-   * @returns {string} The Base58 encoded private key.
+   * @returns {string} The JWK encoded private key.
    */
   get privateKey() {
     return this.privateKeyJwk;
@@ -86,7 +87,7 @@ class MyLinkedDataKeyClass2019 {
   /**
    * Generates and returns a public key fingerprint.
    *
-   * @param {string} publicKeyJwk - The base58 encoded public key material.
+   * @param {string} publicKeyJwk - The jwk encoded public key material.
    *
    * @returns {string} The fingerprint.
    */
@@ -108,7 +109,7 @@ class MyLinkedDataKeyClass2019 {
   /**
    * Tests whether the fingerprint was generated from a given key pair.
    *
-   * @param {string} fingerprint - A Base58 public key.
+   * @param {string} fingerprint - A JWK public key.
    *
    * @returns {Object} An object indicating valid is true or false.
    */
@@ -202,7 +203,6 @@ joseVerifierFactory = key => {
 
   return {
     async verify({ data, signature }) {
-      // console.log(this);
       const alg = key.alg; // Ex: "EdDSA";
       const type = key.type; //Ex: "Ed25519Signature2018";
       const [encodedHeader, encodedSignature] = signature.split("..");

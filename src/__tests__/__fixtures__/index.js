@@ -1,21 +1,29 @@
-const privateKeyJwk = {
-  crv: "secp256k1",
-  d: "rhYFsBPF9q3-uZThy7B3c4LDF_8wnozFUAEm5LLC4Zw",
-  kid: "JUvpllMEYUZ2joO59UNui_XYDqxVqiFLLAJ8klWuPBw",
-  kty: "EC",
-  x: "dWCvM4fTdeM0KmloF57zxtBPXTOythHPMm1HCLrdd3A",
-  y: "36uMVGM7hnw-N6GnjFcihWE3SkrhMLzzLCdPMXPEXlA"
-};
-
-const publicKeyJwk = {
-  crv: "secp256k1",
-  kid: "JUvpllMEYUZ2joO59UNui_XYDqxVqiFLLAJ8klWuPBw",
-  kty: "EC",
-  x: "dWCvM4fTdeM0KmloF57zxtBPXTOythHPMm1HCLrdd3A",
-  y: "36uMVGM7hnw-N6GnjFcihWE3SkrhMLzzLCdPMXPEXlA"
-};
-
 const documentLoader = require("./customDocumentLoader");
+
+// let myLdKey = await MyLinkedDataKeyClass2019.generate("OKP", "Ed25519", {
+//   id: "test-id",
+//   type: "test-type",
+//   controller: "test-controller"
+// });
+const myLdKey = {
+  id: "test-id",
+  type: "test-type",
+  controller: "test-controller",
+  alg: "EdDSA",
+  privateKeyJwk: {
+    crv: "Ed25519",
+    x: "FXEu1TAoxz7upMtTKCUiX5EH2mYCuUEHf7DLuBw9-fo",
+    d: "CzVNg-sNU2ugK14oDESwwNE6NP2o0mGKrGHV5WM4pl8",
+    kty: "OKP",
+    kid: "5Z9WRl3Zd9wG2PJ8NJL2uu1oHyyUK3s15ugbbQ25Sqw"
+  },
+  publicKeyJwk: {
+    crv: "Ed25519",
+    x: "FXEu1TAoxz7upMtTKCUiX5EH2mYCuUEHf7DLuBw9-fo",
+    kty: "OKP",
+    kid: "5Z9WRl3Zd9wG2PJ8NJL2uu1oHyyUK3s15ugbbQ25Sqw"
+  }
+};
 
 const doc = {
   "@context": [
@@ -119,9 +127,8 @@ const didKeyDoc2 = {
 };
 
 module.exports = {
-  privateKeyJwk,
-  publicKeyJwk,
   doc,
+  myLdKey,
   didKeyDoc,
   didKeyDoc2,
   didKeypair,

@@ -3,28 +3,19 @@
   "id": "did:example:123",
   "publicKey": [
     {
-      "id": "did:example:123#JUvpllMEYUZ2joO59UNui_XYDqxVqiFLLAJ8klWuPBw",
+      "id": "did:example:123#test-id",
       "type": "MyJwsVerificationKey2019",
       "controller": "did:example:123",
       "publicKeyJwk": {
-        "crv": "secp256k1",
-        "kid": "JUvpllMEYUZ2joO59UNui_XYDqxVqiFLLAJ8klWuPBw",
-        "kty": "EC",
-        "x": "dWCvM4fTdeM0KmloF57zxtBPXTOythHPMm1HCLrdd3A",
-        "y": "36uMVGM7hnw-N6GnjFcihWE3SkrhMLzzLCdPMXPEXlA"
+        "crv": "Ed25519",
+        "x": "D-5zI9uCYOAk_bN_QWD2XAQ_gIyHUh-6OY7nVk-Rg0g",
+        "d": "zA65gfNF5g2CLKQnl8uRbGI2IRjJIE7PTZki7Qin9bw",
+        "kty": "OKP"
       }
     }
   ],
-  "authentication": [
-    "did:example:123#JUvpllMEYUZ2joO59UNui_XYDqxVqiFLLAJ8klWuPBw"
-  ],
-  "assertionMethod": [
-    "did:example:123#JUvpllMEYUZ2joO59UNui_XYDqxVqiFLLAJ8klWuPBw"
-  ],
-  "capabilityDelegation": [
-    "did:example:123#JUvpllMEYUZ2joO59UNui_XYDqxVqiFLLAJ8klWuPBw"
-  ],
-  "capabilityInvocation": [
-    "did:example:123#JUvpllMEYUZ2joO59UNui_XYDqxVqiFLLAJ8klWuPBw"
-  ]
+  "authentication": ["did:example:123#test-id"],
+  "assertionMethod": ["did:example:123#test-id"],
+  "capabilityDelegation": ["did:example:123#test-id"],
+  "capabilityInvocation": ["did:example:123#test-id"]
 }

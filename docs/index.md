@@ -20,7 +20,7 @@ A public key in JWK format. A JSON Web Key (JWK) is a JavaScript Object Notation
   "id": "did:example:123#JUvpllMEYUZ2joO59UNui_XYDqxVqiFLLAJ8klWuPBw",
   "type": "MyJwsVerificationKey2019",
   "publicKeyJwk": {
-    "crv": "secp256k1",
+    "crv": "Ed25519",
     "kid": "JUvpllMEYUZ2joO59UNui_XYDqxVqiFLLAJ8klWuPBw",
     "kty": "EC",
     "x": "dWCvM4fTdeM0KmloF57zxtBPXTOythHPMm1HCLrdd3A",
@@ -42,7 +42,7 @@ The verification key type for `MyLinkedDataSignature2019`. The key must have a p
     "id": "did:example:123#JUvpllMEYUZ2joO59UNui_XYDqxVqiFLLAJ8klWuPBw",
     "type": "MyJwsVerificationKey2019",
     "publicKeyJwk": {
-      "crv": "secp256k1",
+      "crv": "Ed25519",
       "kid": "JUvpllMEYUZ2joO59UNui_XYDqxVqiFLLAJ8klWuPBw",
       "kty": "EC",
       "x": "dWCvM4fTdeM0KmloF57zxtBPXTOythHPMm1HCLrdd3A",

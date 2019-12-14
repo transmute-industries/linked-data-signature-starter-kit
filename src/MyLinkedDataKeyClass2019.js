@@ -1,4 +1,4 @@
-const jose = require("@panva/jose");
+const jose = require("jose");
 const base64url = require("base64url");
 
 class MyLinkedDataKeyClass2019 {
@@ -15,6 +15,7 @@ class MyLinkedDataKeyClass2019 {
     this.controller = options.controller;
     this.privateKeyJwk = options.privateKeyJwk;
     this.publicKeyJwk = options.publicKeyJwk;
+    this.alg = options.alg;
   }
 
   /**
@@ -64,8 +65,8 @@ class MyLinkedDataKeyClass2019 {
    *
    * @returns {{verify: Function}} Used to verify jsonld-signatures.
    */
-  verifier(key, alg, type) {
-    return joseVerifierFactory(this, alg, type);
+  verifier() {
+    return joseVerifierFactory(this);
   }
 
   /**
@@ -166,27 +167,15 @@ function joseSignerFactory(key) {
     async sign({ data }) {
       const header = {
         alg: "EdDSA",
-        // kid: key.privateKeyJwk.kid,
         b64: false,
         crit: ["b64"]
       };
-      // // console.log(data);
-
-      let encodedHeader = base64url.encode(JSON.stringify(header));
-
-      const toBeSigned = Buffer.concat([
-        Buffer.from(encodedHeader + ".", "utf8"),
-        Buffer.from(data.buffer, data.byteOffset, data.length)
-      ]);
-
-      const justPayload = toBeSigned.slice(57, toBeSigned.length);
-
+      toBeSigned = Buffer.from(data.buffer, data.byteOffset, data.length);
       const flattened = jose.JWS.sign.flattened(
-        justPayload,
+        toBeSigned,
         jose.JWK.asKey(key.privateKeyJwk),
         header
       );
-
       return flattened.protected + ".." + flattened.signature;
     }
   };
@@ -202,14 +191,21 @@ function joseSignerFactory(key) {
  * @returns {{verify: Function}} An async verifier specific
  * to the key passed in.
  */
-function joseVerifierFactory(key, alg = this.alg, type = this.type) {
+joseVerifierFactory = key => {
+  if (!key.publicKeyJwk) {
+    return {
+      async sign() {
+        throw new Error("No public key to verify with.");
+      }
+    };
+  }
+
   return {
     async verify({ data, signature }) {
-      // const alg = this.alg; // "EdDSA";
-      // const type = this.type; //"Ed25519Signature2018";
-
+      // console.log(this);
+      const alg = key.alg; // Ex: "EdDSA";
+      const type = key.type; //Ex: "Ed25519Signature2018";
       const [encodedHeader, encodedSignature] = signature.split("..");
-
       let header;
       try {
         header = JSON.parse(base64url.decode(encodedHeader));
@@ -219,8 +215,6 @@ function joseVerifierFactory(key, alg = this.alg, type = this.type) {
       if (!(header && typeof header === "object")) {
         throw new Error("Invalid JWS header.");
       }
-
-      // console.log(alg, type);
 
       // confirm header matches all expectations
       if (
@@ -238,21 +232,21 @@ function joseVerifierFactory(key, alg = this.alg, type = this.type) {
 
       let verified = false;
 
-      const toBeSigned = Buffer.concat([
-        Buffer.from(encodedHeader),
-        Buffer.from("."),
-        data
-      ]);
+      const detached = {
+        protected: encodedHeader,
+        signature: encodedSignature
+      };
 
-      console.log(toBeSigned.toString("hex"));
-      console.log("toBeSigned matches");
-
-      const jws = `${toBeSigned.toString("utf8")}.${encodedSignature}`;
+      const payload = Buffer.from(data.buffer, data.byteOffset, data.length);
 
       try {
-        jose.JWS.verify(jws, jose.JWK.asKey(key.publicKeyJwk), {
-          crit: ["b64"]
-        });
+        jose.JWS.verify(
+          { ...detached, payload },
+          jose.JWK.asKey(key.publicKeyJwk),
+          {
+            crit: ["b64"]
+          }
+        );
         verified = true;
       } catch (e) {
         console.error("An error occurred when verifying signature: ", e);
@@ -260,6 +254,6 @@ function joseVerifierFactory(key, alg = this.alg, type = this.type) {
       return verified;
     }
   };
-}
+};
 
 module.exports = MyLinkedDataKeyClass2019;

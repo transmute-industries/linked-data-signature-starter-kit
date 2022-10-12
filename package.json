@@ -23,8 +23,8 @@
     "crypto-ld": "^3.7.0",
     "did-method-key": "^0.2.0",
     "jose": "^1.17.1",
-    "jsonld": "^1.8.0",
-    "jsonld-signatures": "^4.4.0"
+    "jsonld": "^8.1.0",
+    "jsonld-signatures": "^11.0.0"
   },
   "devDependencies": {
     "@trust/keyto": "^0.3.7",
